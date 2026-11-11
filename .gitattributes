@@ -1,0 +1,8 @@
+*.SLDPRT binary
+*.SLDASM binary
+*.SLDDRW binary
+*.STEP binary
+*.step binary
+*.STL binary
+*.3mf binary
+*.pdsprj binary

@@ -24,3 +24,7 @@ venv/
 *.workspace
 *.pdsbak
 Last Loaded *.pdsbak
+
+# SolidWorks (archivos temporales y de bloqueo)
+~$*
+*.SLDBAK
