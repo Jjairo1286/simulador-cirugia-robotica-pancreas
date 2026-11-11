@@ -23,7 +23,7 @@ Los ejes van en grados, de 0.00 a 359.91, y valen -1 cuando el encoder no respon
 
 Los joysticks y los pull-up del I2C van a 3.3 V. Las entradas analógicas de la ESP32 no toleran 5 V.
 
-Las direcciones de los multiplexores se definen en el arreglo `manos[]` del código.
+Las direcciones de los multiplexores se definen en el arreglo `manos[]` del código. El cableado completo está en el [diagrama de conexiones](../../hardware/diagramas/).
 
 ## Filtrado y calibración
 

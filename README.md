@@ -13,6 +13,7 @@ El sistema tiene dos manipuladores maestros de 6 grados de libertad, inspirados 
 | `firmware/` | Código de la ESP32 que lee los encoders y los joysticks |
 | `visualizadores/python/` | Scripts de prueba en VPython y matplotlib para ver los encoders y el brazo en tiempo real |
 | `visualizadores/html/` | Página con Three.js y Web Serial para ver los dos mandos e instrumentos en vivo desde Chrome |
+| `hardware/diagramas/` | Diagrama de conexiones del mando: sensores, multiplexores, joysticks, ESP32 y alimentación |
 | `hardware/cad/` | Modelos de SolidWorks de la caja contenedora y del instrumento, con imágenes del ensamble |
 | `hardware/pcb/` | Placa del mando diseñada en Proteus y el arte para fabricarla por planchado |
 
