@@ -2,6 +2,10 @@
 
 `mandos_en_vivo.html` es una página que se abre sola, sin instalar nada. Dibuja en 3D (Three.js) los dos mandos maestros y la muñeca del instrumento robótico, y se conecta directo a la ESP32 por el puerto serie del navegador (Web Serial API).
 
+![Mandos e instrumentos en la página](capturas/mandos_en_vivo.png)
+
+A la izquierda están los dos mandos de 6 ejes, el derecho (D) y el izquierdo (I) en espejo, con cada eje numerado del 1 al 6. A la derecha se ven los dos instrumentos tal como entran por sus trócares, desde la vista del endoscopio, con la posición de la punta en milímetros. Cada panel tiene botones para cambiar de cámara: desde el usuario, isométrica y superior para los mandos; endoscopio, robot completo, lateral, superior y acercamiento a la muñeca para los instrumentos.
+
 En la computadora se llamaba `corregido.html`. Se renombró con el nombre que la propia página usa en sus mensajes.
 
 ## Cómo usarlo
