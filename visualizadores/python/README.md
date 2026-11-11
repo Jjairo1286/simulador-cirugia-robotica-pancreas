@@ -10,6 +10,26 @@ Scripts de prueba que se usaron para verificar los encoders y la cinemática del
 
 `XYZ.py` y `ALL.py` se escribieron cuando el firmware leía un solo mando. Con el firmware bimanual siguen funcionando, porque las primeras columnas son las de la mano derecha.
 
+## Capturas
+
+### 12ENCODERS.py
+
+![Brújulas de los 12 encoders](capturas/12ENCODERS.png)
+
+Cada brújula es un AS5600 con su ángulo crudo en grados. Las seis primeras son de la mano derecha y las seis siguientes de la izquierda, en el mismo orden en que llegan por el serial.
+
+### ALL.py
+
+![Brazo de 6 GDL con gimbal](capturas/ALL.png)
+
+El brazo amarillo y naranja es la parte de posición (ejes 1 a 3). Los tres anillos del gimbal muestran la orientación (ejes 4 a 6) con el vástago de la pinza en el centro. El gimbal se dibuja 6 cm por encima de la punta del brazo (`ALTURA_GYMBALL`) para que no quede tapado por el eslabón.
+
+### XYZ.py
+
+![Brazo de 3 GDL con posición XYZ](capturas/XYZ.png)
+
+Solo la cadena de posición, con la etiqueta de las coordenadas X, Y, Z de la punta en centímetros.
+
 ## Uso
 
 ```
