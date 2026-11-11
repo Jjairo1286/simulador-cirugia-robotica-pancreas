@@ -11,5 +11,6 @@ El sistema tiene dos manipuladores maestros de 6 grados de libertad, inspirados 
 | Carpeta | Qué hay |
 |---|---|
 | `firmware/` | Código de la ESP32 que lee los encoders y los joysticks |
+| `hardware/pcb/` | Placa del mando diseñada en Proteus y el arte para fabricarla por planchado |
 
 El repositorio se va completando por partes.

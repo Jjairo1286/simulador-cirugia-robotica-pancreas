@@ -19,3 +19,8 @@ venv/
 # Editores
 .vscode/
 .idea/
+
+# Proteus (archivos de sesión y respaldos automáticos)
+*.workspace
+*.pdsbak
+Last Loaded *.pdsbak
