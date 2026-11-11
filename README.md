@@ -6,6 +6,14 @@ Autor: Jairo Marcelo Canqui Montoya
 
 El sistema tiene dos manipuladores maestros de 6 grados de libertad, inspirados en la consola de Hugo RAS. Cada uno lleva seis encoders magnéticos AS5600 y un joystick que funciona como gatillo de la pinza. Una ESP32 lee los dos mandos y manda los datos por el puerto serie a un simulador hecho en Unity, donde se practican ejercicios con ambas manos.
 
+![Prototipo funcionando con el simulador en Unity](docs/fotos/prototipo_con_unity.png)
+
+Los dos mandos montados sobre la caja contenedora, con la PCB y la ESP32 al frente. En el monitor, Unity muestra uno de los ejercicios: los dos instrumentos trabajando sobre el páncreas cerca de los vasos, con el panel de información a la izquierda y la vista de los mandos arriba a la derecha.
+
+![Operando los dos mandos a la vez](docs/fotos/prototipo_en_uso.png)
+
+Cada mano sujeta el mango de un manipulador. La posición sale del brazo y la orientación del gimbal, y el gatillo abre y cierra la pinza.
+
 ## Contenido
 
 | Carpeta | Qué hay |
