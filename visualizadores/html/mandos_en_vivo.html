@@ -1,0 +1,798 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Muñeca de instrumento robótico</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: dos escenarios 3D (mandos | instrumentos) y debajo tres bloques de control para la mano elegida; en teléfono todo se apila. */
+:root{
+  --bg:#f3f6f7; --panel:#ffffff; --stage:#dde4e8; --fg:#17232b; --muted:#566872; --line:#c9d3d9;
+  --btn:#e8eef1; --btn-fg:#17232b; --focus:#0b6fa4; --warn:#a8321c;
+  --roll:#b06a00; --pitch:#b3246f; --yaw:#1466c2; --grip:#1c7f4a;
+  --sideR:#1c7f4a; --sideL:#6a3fc0;
+  --l1:#c9a400; --l2:#2f9a4b; --l3:#d9508f; --l4:#2f6fd6; --l5:#d23b3b; --l6:#7d8890;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Barlow","Segoe UI",Helvetica,Arial,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1418; --panel:#161e24; --stage:#0a0f12; --fg:#e4ecf0; --muted:#93a5af; --line:#2b3841;
+    --btn:#222d35; --btn-fg:#e4ecf0; --focus:#6cc4f5; --warn:#ff9a80;
+    --roll:#f0a93a; --pitch:#f06fb0; --yaw:#6aaef7; --grip:#5fd08f;
+    --sideR:#5fd08f; --sideL:#b39af5;
+    --l1:#e8c62a; --l2:#4fc46d; --l3:#f07fb3; --l4:#6a9cf2; --l5:#f06a6a; --l6:#a3adb4; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1418; --panel:#161e24; --stage:#0a0f12; --fg:#e4ecf0; --muted:#93a5af; --line:#2b3841;
+  --btn:#222d35; --btn-fg:#e4ecf0; --focus:#6cc4f5; --warn:#ff9a80;
+  --roll:#f0a93a; --pitch:#f06fb0; --yaw:#6aaef7; --grip:#5fd08f;
+  --sideR:#5fd08f; --sideL:#b39af5;
+  --l1:#e8c62a; --l2:#4fc46d; --l3:#f07fb3; --l4:#6a9cf2; --l5:#f06a6a; --l6:#a3adb4; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45;padding-block:20px;padding-inline:16px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header h1{font-family:var(--f-display);font-weight:600;font-size:30px;line-height:1.1;margin:0;letter-spacing:.01em;text-wrap:balance}
+header p{margin:4px 0 0;color:var(--muted);max-width:72ch}
+.stages{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.panels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+@media (max-width:980px){.panels{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:720px){.stages{grid-template-columns:minmax(0,1fr)}}
+.stage{position:relative;background:var(--stage);border:1px solid var(--line);border-radius:6px;overflow:hidden;height:clamp(280px,52vh,520px)}
+.stage canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+.stage canvas:active{cursor:grabbing}
+.tag{position:absolute;left:10px;top:8px;font-family:var(--f-display);font-size:14px;letter-spacing:.09em;text-transform:uppercase;color:var(--fg);pointer-events:none}
+.hud{position:absolute;left:10px;top:30px;font-family:var(--f-mono);font-size:12px;color:var(--muted);pointer-events:none;font-variant-numeric:tabular-nums}
+.hud b{color:var(--fg);font-weight:500}
+.hint{position:absolute;right:10px;top:10px;font-size:12px;color:var(--muted);pointer-events:none;text-align:right}
+.views{position:absolute;left:10px;bottom:10px;right:10px;display:flex;flex-wrap:wrap;gap:6px}
+.fail{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:13px;min-width:0}
+.panel h2{font-family:var(--f-display);font-weight:600;font-size:14px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0}
+.panel h2 .who{color:var(--side)}
+.ctl{display:flex;flex-direction:column;gap:3px}
+.ctl .top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.ctl label{font-weight:600}
+.ctl label small{font-weight:400;color:var(--muted);font-size:13px}
+.ctl output{font-family:var(--f-mono);font-size:14px;font-variant-numeric:tabular-nums}
+.ctl .row{display:flex;align-items:center;gap:8px}
+.ctl input[type=range]{flex:1;min-width:0;height:28px;margin:0;accent-color:var(--c)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;background:var(--c)}
+.c-roll{--c:var(--roll)} .c-pitch{--c:var(--pitch)} .c-yaw{--c:var(--yaw)} .c-grip{--c:var(--grip)} .c-n{--c:var(--muted)}
+.c-1{--c:var(--l1)} .c-2{--c:var(--l2)} .c-3{--c:var(--l3)} .c-4{--c:var(--l4)} .c-5{--c:var(--l5)} .c-6{--c:var(--l6)}
+button{font:inherit;font-weight:500;color:var(--btn-fg);background:var(--btn);border:1px solid var(--line);border-radius:5px;padding:7px 12px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+button.step{width:34px;padding:5px 0;font-family:var(--f-mono)}
+button[aria-pressed="true"]{border-color:var(--focus);box-shadow:inset 0 0 0 1px var(--focus)}
+.views button{font-size:13px;padding:5px 10px}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.seg button{padding:9px 6px;font-weight:600}
+.seg button .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:7px;background:var(--side)}
+.sR{--side:var(--sideR)} .sL{--side:var(--sideL)}
+.seg button[aria-pressed="true"]{border-color:var(--side);box-shadow:inset 0 0 0 2px var(--side)}
+hr{border:0;border-top:1px solid var(--line);margin:0;width:100%}
+.read{display:grid;grid-template-columns:1fr auto;gap:3px 12px;margin:0}
+.read dt{color:var(--muted)} .read dd{margin:0;font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+.read dt .dot{width:8px;height:8px}
+.discs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.disc{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;font-size:12px;color:var(--muted)}
+.disc svg{width:100%;max-width:54px;height:auto}
+.disc .ring{fill:none;stroke:var(--line);stroke-width:2}
+.disc .tick{stroke:var(--c);stroke-width:3;stroke-linecap:round}
+.disc .hubc{fill:var(--c)}
+.disc span{font-family:var(--f-mono);color:var(--fg);font-variant-numeric:tabular-nums}
+.note{font-size:13px;color:var(--muted);margin:0}
+.warn{font-size:13px;color:var(--warn);margin:0;font-weight:500}
+button:disabled,input:disabled,select:disabled{opacity:.45;cursor:not-allowed}
+.livehead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.pill{font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-radius:999px;padding:2px 10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.pill.on{color:var(--grip);border-color:var(--grip)}
+.livegrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:16px;align-items:start}
+@media (max-width:980px){.livegrid{grid-template-columns:minmax(0,1fr)}}
+.livecol{display:flex;flex-direction:column;gap:12px;min-width:0}
+.fields{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--muted)}
+.fields label{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+select{font:inherit;color:var(--btn-fg);background:var(--btn);border:1px solid var(--line);border-radius:5px;padding:4px 6px}
+select:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.axes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:520px){.axes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ax{border:1px solid var(--line);border-radius:5px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.ax .n{font-weight:600}
+.ax .v{font-family:var(--f-mono);font-size:19px;font-variant-numeric:tabular-nums}
+.ax .r{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ax label{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center;margin-top:2px}
+.lastline{font-family:var(--f-mono);font-size:12px;color:var(--muted);margin:0;overflow-wrap:anywhere;min-height:1.45em}
+.axhead{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted)}
+.axhead b{color:var(--side)}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Mandos maestros e instrumentos robóticos</h1>
+    <p>Los dos mandos de 6 ejes (derecho e izquierdo, en espejo) y los dos instrumentos que entran por sus trócares. Conecta el Arduino para que los encoders muevan los dos mandos, o elige una mano y mueve sus ejes con los deslizadores. La pinza está abierta en reposo y se cierra con el gatillo.</p>
+  </header>
+
+  <div class="stages">
+    <div class="stage" id="stage-m">
+      <canvas id="view-m" aria-label="Modelo 3D de los dos mandos. Arrastra para orbitar y usa la rueda para acercar."></canvas>
+      <div class="tag">Mandos</div>
+      <div class="hint">Arrastra para girar la vista</div>
+      <div class="views"><button type="button" data-v="usr">Desde el usuario</button><button type="button" data-v="iso">Isométrica</button><button type="button" data-v="sup">Superior</button></div>
+    </div>
+    <div class="stage" id="stage-i">
+      <canvas id="view-i" aria-label="Modelo 3D de los dos instrumentos. Arrastra para orbitar y usa la rueda para acercar."></canvas>
+      <div class="tag">Instrumentos</div>
+      <div class="hud">punta <span id="hud-side">derecha</span> (mm) &nbsp;x <b id="tx">0.0</b> &nbsp;y <b id="ty">0.0</b> &nbsp;z <b id="tz">0.0</b></div>
+      <div class="hint">Rueda o pellizco para acercar</div>
+      <div class="views"><button type="button" data-v="cam">Vista del endoscopio</button><button type="button" data-v="lat">Lateral</button><button type="button" data-v="sup">Superior</button><button type="button" data-v="mun">Acercar a la muñeca</button></div>
+    </div>
+  </div>
+
+  <section class="panel" id="live" aria-labelledby="lv-h">
+    <div class="livehead"><h2 id="lv-h">Mandos en vivo (encoders AS5600)</h2><span class="pill" id="lv-state">Sin conexión</span></div>
+    <div class="livegrid">
+      <div class="livecol">
+        <div class="btns">
+          <button type="button" id="lv-connect">Conectar el Arduino</button>
+          <button type="button" id="lv-zero" disabled>Poner en cero aquí</button>
+          <button type="button" id="lv-sim" aria-pressed="false">Probar sin Arduino</button>
+        </div>
+        <div class="fields">
+          <label for="lv-baud">Baudios <select id="lv-baud"><option>9600</option><option selected>115200</option><option>230400</option><option>500000</option></select></label>
+          <label for="lv-first">Si llegan 12 o 14 datos, los primeros son de la <select id="lv-first"><option value="R">mano derecha</option><option value="L">mano izquierda</option></select></label>
+          <label for="lv-gmode">El gatillo (7.º dato de cada mano) llega como <select id="lv-gmode"><option value="pct">0 a 100 % presionado</option><option value="adc">0 a 1023 (lectura analógica)</option><option value="deg">apertura de 0 a 60°</option></select></label>
+          <label for="lv-single">Con un solo encoder, mueve el <select id="lv-single"><option value="0">Eje 1</option><option value="1">Eje 2</option><option value="2">Eje 3</option><option value="3">Eje 4</option><option value="4">Eje 5</option><option value="5">Eje 6</option></select> de la mano elegida</label>
+        </div>
+        <p class="note" id="lv-msg">La posición en la que esté cada mando al conectar se toma como 0° de cada eje. Con 12 o 14 datos se mueven las dos manos; con 6 o 7, solo la mano elegida abajo.</p>
+        <p class="lastline" id="lv-line" aria-live="off"></p>
+      </div>
+      <div class="livecol">
+        <div class="axhead"><span>Encoders de la mano <b id="lv-who">derecha</b></span><span id="lv-grip">gatillo: sin dato</span></div>
+        <div class="axes" id="lv-axes"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="panels">
+    <div class="panel">
+      <div class="seg" role="group" aria-label="Mano que controlas">
+        <button type="button" id="side-L" class="sL" aria-pressed="false"><span class="sw"></span>Mano izquierda</button>
+        <button type="button" id="side-R" class="sR" aria-pressed="true"><span class="sw"></span>Mano derecha</button>
+      </div>
+      <h2>Mando <span class="who" id="who1">derecho</span>: brazo</h2>
+      <div class="ctl c-1"><div class="top"><label for="s-q1"><span class="dot"></span>Eje 1 <small>giro de la base</small></label><output id="o-q1" for="s-q1">0°</output></div>
+        <div class="row"><button type="button" class="step" data-k="q1" data-d="-5" aria-label="Eje 1 menos 5 grados">−</button><input type="range" id="s-q1" min="-45" max="45" step="1" value="0"><button type="button" class="step" data-k="q1" data-d="5" aria-label="Eje 1 más 5 grados">+</button></div></div>
+      <div class="ctl c-2"><div class="top"><label for="s-q2"><span class="dot"></span>Eje 2 <small>hombro</small></label><output id="o-q2" for="s-q2">0°</output></div>
+        <div class="row"><button type="button" class="step" data-k="q2" data-d="-5" aria-label="Eje 2 menos 5 grados">−</button><input type="range" id="s-q2" min="-35" max="35" step="1" value="0"><button type="button" class="step" data-k="q2" data-d="5" aria-label="Eje 2 más 5 grados">+</button></div></div>
+      <div class="ctl c-3"><div class="top"><label for="s-q3"><span class="dot"></span>Eje 3 <small>codo</small></label><output id="o-q3" for="s-q3">0°</output></div>
+        <div class="row"><button type="button" class="step" data-k="q3" data-d="-5" aria-label="Eje 3 menos 5 grados">−</button><input type="range" id="s-q3" min="-35" max="35" step="1" value="0"><button type="button" class="step" data-k="q3" data-d="5" aria-label="Eje 3 más 5 grados">+</button></div></div>
+      <hr>
+      <div class="ctl c-n"><div class="top"><label for="s-scale">Escala de movimiento <small>ambas manos</small></label><output id="o-scale" for="s-scale">0.4×</output></div>
+        <div class="row"><input type="range" id="s-scale" min="0.2" max="0.6" step="0.05" value="0.4"></div></div>
+      <p class="note">El mando izquierdo es el espejo del derecho: con el mismo ángulo en cada eje, los dos instrumentos hacen movimientos simétricos.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Mando <span class="who" id="who2">derecho</span>: gimbal y gatillo</h2>
+      <div class="ctl c-4"><div class="top"><label for="s-q4"><span class="dot"></span>Eje 4 <small>ele azul</small></label><output id="o-q4" for="s-q4">0°</output></div>
+        <div class="row"><button type="button" class="step" data-k="q4" data-d="-5" aria-label="Eje 4 menos 5 grados">−</button><input type="range" id="s-q4" min="-80" max="80" step="1" value="0"><button type="button" class="step" data-k="q4" data-d="5" aria-label="Eje 4 más 5 grados">+</button></div></div>
+      <div class="ctl c-5"><div class="top"><label for="s-q5"><span class="dot"></span>Eje 5 <small>ele roja</small></label><output id="o-q5" for="s-q5">0°</output></div>
+        <div class="row"><button type="button" class="step" data-k="q5" data-d="-5" aria-label="Eje 5 menos 5 grados">−</button><input type="range" id="s-q5" min="-80" max="80" step="1" value="0"><button type="button" class="step" data-k="q5" data-d="5" aria-label="Eje 5 más 5 grados">+</button></div></div>
+      <div class="ctl c-6"><div class="top"><label for="s-q6"><span class="dot"></span>Eje 6 <small>giro del mango</small></label><output id="o-q6" for="s-q6">0°</output></div>
+        <div class="row"><button type="button" class="step" data-k="q6" data-d="-5" aria-label="Eje 6 menos 5 grados">−</button><input type="range" id="s-q6" min="-180" max="180" step="1" value="0"><button type="button" class="step" data-k="q6" data-d="5" aria-label="Eje 6 más 5 grados">+</button></div></div>
+      <div class="ctl c-grip"><div class="top"><label for="s-g"><span class="dot"></span>Gatillo <small>joystick presionado</small></label><output id="o-g" for="s-g">0%</output></div>
+        <div class="row"><button type="button" class="step" data-k="g" data-d="-10" aria-label="Gatillo menos 10 por ciento">−</button><input type="range" id="s-g" min="0" max="100" step="1" value="0"><button type="button" class="step" data-k="g" data-d="10" aria-label="Gatillo más 10 por ciento">+</button></div></div>
+      <div class="btns">
+        <button type="button" id="b-close">Cerrar pinza</button>
+        <button type="button" id="b-open">Soltar gatillo</button>
+        <button type="button" id="b-mirror">Copiar a la otra mano</button>
+        <button type="button" id="b-reset">Reiniciar ambas</button>
+      </div>
+      <hr>
+      <div class="btns">
+        <button type="button" id="b-demo" aria-pressed="false">Reproducir demostración</button>
+        <button type="button" id="b-trail" aria-pressed="false">Rastro de las puntas</button>
+        <button type="button" id="b-axes" aria-pressed="true">Ejes</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Instrumento <span class="who" id="who3">derecho</span> (calculado)</h2>
+      <dl class="read">
+        <dt>Inclinación del vástago</dt><dd id="r-inc">0°</dd>
+        <dt>Giro lateral del vástago</dt><dd id="r-lat">0°</dd>
+        <dt>Inserción desde el trócar</dt><dd id="r-ins">0 mm</dd>
+        <dt class="c-roll"><span class="dot"></span>Rotación del vástago</dt><dd id="r-roll">0°</dd>
+        <dt class="c-pitch"><span class="dot"></span>Cabeceo de la muñeca</dt><dd id="r-pitch">0°</dd>
+        <dt class="c-yaw"><span class="dot"></span>Guiñada de las mordazas</dt><dd id="r-yaw">0°</dd>
+        <dt class="c-grip"><span class="dot"></span>Apertura de la pinza</dt><dd id="r-open">60°</dd>
+      </dl>
+      <p class="warn" id="w-msg" hidden></p>
+      <hr>
+      <h2>Discos de accionamiento</h2>
+      <div class="discs">
+        <div class="disc c-roll"><svg viewBox="0 0 40 40"><circle class="ring" cx="20" cy="20" r="17"/><line class="tick" id="d1" x1="20" y1="20" x2="20" y2="6"/><circle class="hubc" cx="20" cy="20" r="3"/></svg>Rotación<span id="n1">0°</span></div>
+        <div class="disc c-pitch"><svg viewBox="0 0 40 40"><circle class="ring" cx="20" cy="20" r="17"/><line class="tick" id="d2" x1="20" y1="20" x2="20" y2="6"/><circle class="hubc" cx="20" cy="20" r="3"/></svg>Cabeceo<span id="n2">0°</span></div>
+        <div class="disc c-yaw"><svg viewBox="0 0 40 40"><circle class="ring" cx="20" cy="20" r="17"/><line class="tick" id="d3" x1="20" y1="20" x2="20" y2="6"/><circle class="hubc" cx="20" cy="20" r="3"/></svg>Mordaza A<span id="n3">0°</span></div>
+        <div class="disc c-grip"><svg viewBox="0 0 40 40"><circle class="ring" cx="20" cy="20" r="17"/><line class="tick" id="d4" x1="20" y1="20" x2="20" y2="6"/><circle class="hubc" cx="20" cy="20" r="3"/></svg>Mordaza B<span id="n4">0°</span></div>
+      </div>
+      <p class="note">Los dos trócares están separados y los vástagos convergen hacia el centro, como en una cirugía real. Por eso, en reposo, cada muñeca ya compensa algo de cabeceo y de guiñada.</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var SIDES = ['R','L'], NAME = {R:'derecho', L:'izquierdo'}, NAMEF = {R:'derecha', L:'izquierda'};
+  var IN = ['q1','q2','q3','q4','q5','q6','g'];
+  var lim = {q1:[-45,45],q2:[-35,35],q3:[-35,35],q4:[-80,80],q5:[-80,80],q6:[-180,180],g:[0,100]};
+  var OPEN = 60, D2R = Math.PI/180;
+  function zero(){ return {q1:0,q2:0,q3:0,q4:0,q5:0,q6:0,g:0,roll:0,pitch:0,yaw:0}; }
+  var S = {R:zero(), L:zero()};
+  var K = {R:{inc:0,lat:0,ins:0,wrist:false,work:false,tip:[0,0,0]}, L:{inc:0,lat:0,ins:0,wrist:false,work:false,tip:[0,0,0]}};
+  var act = 'R', scale = 0.4;
+  var apply3D = function(){};
+
+  function deg(v){ return Math.round(v) + '°'; }
+  function clamp(k,v){ return Math.min(lim[k][1], Math.max(lim[k][0], v)); }
+  function openAng(s){ return OPEN*(1 - S[s].g/100); }
+
+  function update(){
+    apply3D();
+    var s = S[act], k = K[act];
+    IN.forEach(function(q){ $('s-'+q).value = Math.round(s[q]); $('o-'+q).textContent = q === 'g' ? Math.round(s.g) + '%' : deg(s[q]); });
+    var op = openAng(act);
+    $('r-inc').textContent = k.inc.toFixed(1) + '°'; $('r-lat').textContent = k.lat.toFixed(1) + '°'; $('r-ins').textContent = k.ins.toFixed(0) + ' mm';
+    $('r-roll').textContent = deg(s.roll); $('r-pitch').textContent = deg(s.pitch); $('r-yaw').textContent = deg(s.yaw); $('r-open').textContent = deg(op);
+    var vals = [s.roll, s.pitch, s.yaw + op/2, s.yaw - op/2];
+    for (var i=0;i<4;i++){
+      $('d'+(i+1)).setAttribute('transform','rotate('+vals[i].toFixed(1)+' 20 20)');
+      $('n'+(i+1)).textContent = deg(vals[i]);
+    }
+    $('tx').textContent = k.tip[0].toFixed(1); $('ty').textContent = k.tip[1].toFixed(1); $('tz').textContent = k.tip[2].toFixed(1);
+    var msgs = [];
+    SIDES.forEach(function(sd){
+      if (K[sd].wrist) msgs.push('Instrumento ' + NAME[sd] + ': la orientación del mango pide más de 80° en la muñeca, así que se queda en su límite.');
+      if (K[sd].work) msgs.push('Instrumento ' + NAME[sd] + ': la posición queda fuera del alcance del vástago. Acerca el mando al centro o baja la escala.');
+    });
+    $('w-msg').hidden = !msgs.length; $('w-msg').textContent = msgs.join(' ');
+  }
+  function set(k,v){ S[act][k] = clamp(k,v); update(); }
+
+  IN.forEach(function(k){
+    $('s-'+k).addEventListener('input', function(e){ stopDemo(); set(k, parseFloat(e.target.value)); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('button.step'), function(b){
+    b.addEventListener('click', function(){ stopDemo(); set(b.dataset.k, S[act][b.dataset.k] + parseFloat(b.dataset.d)); });
+  });
+  $('s-scale').addEventListener('input', function(e){
+    scale = parseFloat(e.target.value); $('o-scale').textContent = scale.toFixed(2).replace(/0$/,'') + '×'; clearTrail(); update();
+  });
+  function setSide(sd){
+    act = sd;
+    SIDES.forEach(function(x){ $('side-'+x).setAttribute('aria-pressed', String(x === sd)); });
+    ['who1','who2','who3'].forEach(function(id){ var e = $(id); e.textContent = NAME[sd]; e.parentNode.className = sd === 'R' ? 'sR' : 'sL'; });
+    $('hud-side').textContent = NAMEF[sd];
+    if (followAct) followAct();
+    if (liveAxesUI) liveAxesUI();
+    update();
+  }
+  var liveAxesUI = null;
+  var followAct = null;
+  $('side-R').addEventListener('click', function(){ setSide('R'); });
+  $('side-L').addEventListener('click', function(){ setSide('L'); });
+  $('b-mirror').addEventListener('click', function(){
+    stopDemo(); var o = act === 'R' ? 'L' : 'R';
+    IN.forEach(function(k){ S[o][k] = S[act][k]; }); update();
+  });
+
+  /* ---------- animación ---------- */
+  var anim = null, demoOn = false;
+  function ease(t){ return t<.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2; }
+  function tweenTo(target, ms, sides, done){
+    var from = {}; sides.forEach(function(sd){ from[sd] = {}; IN.forEach(function(k){ from[sd][k] = S[sd][k]; }); });
+    anim = {from:from, to:target, sides:sides, t0:performance.now(), ms:ms, done:done};
+  }
+  function stepAnim(now){
+    if (!anim) return;
+    var u = Math.min(1, (now - anim.t0)/anim.ms), e = ease(u);
+    anim.sides.forEach(function(sd){
+      IN.forEach(function(k){ if (anim.to[k] !== undefined) S[sd][k] = anim.from[sd][k] + (anim.to[k]-anim.from[sd][k])*e; });
+    });
+    update();
+    if (u >= 1){ var d = anim.done; anim = null; if (d) d(); }
+  }
+  var ZERO = {q1:0,q2:0,q3:0,q4:0,q5:0,q6:0,g:0};
+  $('b-close').addEventListener('click', function(){ stopDemo(); tweenTo({g:100}, 300, [act]); });
+  $('b-open').addEventListener('click', function(){ stopDemo(); tweenTo({g:0}, 300, [act]); });
+  $('b-reset').addEventListener('click', function(){ stopDemo(); clearTrail(); tweenTo(ZERO, 450, SIDES); });
+
+  var DEMO = [
+    [ZERO,600],
+    [{q1:25},900],[{q1:-25},1500],[{q1:0},800],
+    [{q2:-20,q3:20},1000],[{q2:15,q3:-15},1500],[{q2:0,q3:0},900],
+    [{q4:-25},800],[{q6:-150},900],[{q6:150},2800],[{q6:0},900],[{q4:0},700],
+    [{q5:40},700],[{q5:-40},1200],[{q5:0},700],
+    [{g:100},350],[{g:0},350],[{g:100},350],[{g:0},350]
+  ];
+  function runDemo(i){
+    if (!demoOn) return;
+    if (i >= DEMO.length){ stopDemo(); return; }
+    if (i === 1) clearTrail();
+    tweenTo(DEMO[i][0], DEMO[i][1], SIDES, function(){ runDemo(i+1); });
+  }
+  function stopDemo(){
+    if (!demoOn) return;
+    demoOn = false; anim = null;
+    $('b-demo').setAttribute('aria-pressed','false'); $('b-demo').textContent = 'Reproducir demostración';
+  }
+  $('b-demo').addEventListener('click', function(){
+    if (demoOn){ stopDemo(); return; }
+    demoOn = true; setTrail(true);
+    $('b-demo').setAttribute('aria-pressed','true'); $('b-demo').textContent = 'Detener demostración';
+    runDemo(0);
+  });
+
+  var trailOn = false, clearTrail = function(){}, setAxes = function(){};
+  function setTrail(on){ trailOn = on; $('b-trail').setAttribute('aria-pressed', String(on)); if (!on) clearTrail(); }
+  $('b-trail').addEventListener('click', function(){ setTrail(!trailOn); });
+  var axesOn = true;
+  $('b-axes').addEventListener('click', function(){ axesOn = !axesOn; $('b-axes').setAttribute('aria-pressed', String(axesOn)); setAxes(axesOn); update(); });
+
+  /* ---------- mandos en vivo: encoders por puerto serie, dos manos ---------- */
+  function nulls(){ return [null,null,null,null,null,null]; }
+  var LV = {on:false, sim:null, port:null, reader:null, raw:{R:nulls(), L:nulls()}, zero:{R:nulls(), L:nulls()},
+            sign:{R:[1,1,1,1,1,1], L:[1,1,1,1,1,1]}, grip:{R:null, L:null}, single:0, first:'R', gmode:'pct', dirty:false, n:0, kind:''};
+  var QK = ['q1','q2','q3','q4','q5','q6'];
+  function wrap180(a){ return ((a + 180) % 360 + 360) % 360 - 180; }
+  function gripPct(v){
+    var p = LV.gmode === 'adc' ? v/1023*100 : LV.gmode === 'deg' ? (1 - v/60)*100 : v;
+    return Math.max(0, Math.min(100, p));
+  }
+  /* Acepta "Raw: 123 | Angulo: 10.81 grados" (un encoder), o 6, 7, 12 o 14 números separados por coma, espacio o punto y coma */
+  function parseLine(line){
+    var m = /Angulo:\s*(-?\d+(?:\.\d+)?)/i.exec(line);
+    if (m) return {one: parseFloat(m[1])};
+    var parts = line.trim().split(/[\s,;]+/), nums = [];
+    for (var i=0;i<parts.length;i++){ if (!/^-?\d+(\.\d+)?$/.test(parts[i])) return null; nums.push(parseFloat(parts[i])); }
+    if (nums.length === 1) return {one: nums[0]};
+    function pack(side, arr){ return {side:side, six:arr.slice(0, 6), grip: arr.length >= 7 ? arr[6] : null}; }
+    if (nums.length >= 12){
+      var h = nums.length >> 1, other = LV.first === 'R' ? 'L' : 'R';
+      return {sets:[pack(LV.first, nums.slice(0, h)), pack(other, nums.slice(h))]};
+    }
+    return nums.length >= 6 ? {sets:[pack(act, nums)]} : null;
+  }
+  function liveMsg(t){ $('lv-msg').textContent = t; }
+  function onLine(line){
+    if (!line) return;
+    $('lv-line').textContent = line.length > 140 ? line.slice(0, 140) + '…' : line;
+    var p = parseLine(line);
+    if (!p){ if (/[A-Za-zÁ-ú]{3}/.test(line) && !/^Probando/i.test(line)) liveMsg('El Arduino dice: ' + line); return; }
+    if (p.one !== undefined){ LV.raw[act][LV.single] = p.one; LV.kind = '1 encoder'; }
+    else {
+      var g = false;
+      p.sets.forEach(function(st){
+        for (var i=0;i<6;i++){ if (st.six[i] >= 0) LV.raw[st.side][i] = st.six[i]; }
+        if (st.grip !== null && st.grip >= 0){ LV.grip[st.side] = st.grip; g = true; }
+      });
+      LV.kind = (p.sets.length === 2 ? 'dos manos' : 'mano ' + NAMEF[p.sets[0].side]) + (g ? ' + gatillo' : '');
+    }
+    LV.n++; LV.dirty = true;
+  }
+  function liveStep(){
+    if (!LV.on || !LV.dirty) return;
+    var rem = 0;
+    SIDES.forEach(function(sd){
+      for (var i=0;i<6;i++){
+        var raw = LV.raw[sd][i];
+        if (raw === null) continue;
+        if (LV.zero[sd][i] === null) LV.zero[sd][i] = raw;
+        var k = QK[i], d = wrap180(raw - LV.zero[sd][i]) * LV.sign[sd][i], e = wrap180(d - S[sd][k]);
+        S[sd][k] = Math.abs(e) < 0.05 ? d : wrap180(S[sd][k] + e*0.5);
+        rem = Math.max(rem, Math.abs(e));
+      }
+      if (LV.grip[sd] != null){
+        var tg = gripPct(LV.grip[sd]), eg = tg - S[sd].g;
+        S[sd].g = Math.abs(eg) < 0.05 ? tg : S[sd].g + eg*0.5; rem = Math.max(rem, Math.abs(eg));
+      }
+    });
+    LV.dirty = rem >= 0.05;
+    liveAxesUI();
+    update();
+  }
+  liveAxesUI = function(){
+    $('lv-who').textContent = NAMEF[act];
+    for (var i=0;i<6;i++){
+      var raw = LV.raw[act][i], z = LV.zero[act][i];
+      $('lv-r'+i).textContent = raw === null ? 'sin dato' : 'sensor ' + raw.toFixed(1) + '°';
+      if (raw === null || z === null) $('lv-v'+i).textContent = '—';
+      else { var d = wrap180(raw - z) * LV.sign[act][i]; $('lv-v'+i).textContent = (d >= 0 ? '+' : '') + d.toFixed(1) + '°'; }
+      $('lv-inv'+i).checked = LV.sign[act][i] < 0;
+    }
+    var gr = LV.grip[act];
+    $('lv-grip').textContent = gr == null ? 'gatillo: sin dato' : 'gatillo: ' + Math.round(gripPct(gr)) + ' % presionado';
+  };
+  function liveZero(){ SIDES.forEach(function(sd){ for (var i=0;i<6;i++){ LV.zero[sd][i] = LV.raw[sd][i]; } }); LV.dirty = true; liveAxesUI(); }
+  function liveClear(){ SIDES.forEach(function(sd){ LV.raw[sd] = nulls(); LV.zero[sd] = nulls(); LV.grip[sd] = null; }); liveAxesUI(); }
+  function liveUI(){
+    var serial = !!LV.port, sim = !!LV.sim;
+    $('lv-connect').textContent = serial ? 'Desconectar' : 'Conectar el Arduino';
+    $('lv-connect').disabled = sim || !navigator.serial;
+    $('lv-sim').disabled = serial; $('lv-sim').setAttribute('aria-pressed', String(sim));
+    $('lv-sim').textContent = sim ? 'Detener la prueba' : 'Probar sin Arduino';
+    $('lv-zero').disabled = !LV.on; $('lv-baud').disabled = serial;
+    $('lv-state').className = 'pill' + (LV.on ? ' on' : '');
+    if (!LV.on) $('lv-state').textContent = 'Sin conexión';
+  }
+  function liveStart(){ LV.on = true; LV.n = 0; LV.kind = ''; liveClear(); stopDemo(); anim = null; liveUI(); $('lv-state').textContent = 'Esperando datos'; }
+  setInterval(function(){
+    if (!LV.on) return;
+    $('lv-state').textContent = LV.n ? (LV.sim ? 'Prueba · ' : 'En vivo · ') + LV.kind + ' · ' + LV.n + ' Hz' : 'Esperando datos';
+    LV.n = 0;
+  }, 1000);
+
+  async function liveConnect(){
+    var port;
+    try {
+      port = await navigator.serial.requestPort();
+      await port.open({baudRate: parseInt($('lv-baud').value, 10)});
+    } catch (err) {
+      liveMsg(err && err.name === 'NotFoundError' ? 'No elegiste ningún puerto.' : 'No se pudo abrir el puerto. Cierra el Monitor Serie del Arduino IDE y Unity (solo un programa puede usar el puerto) y vuelve a conectar.');
+      return;
+    }
+    LV.port = port; liveStart();
+    liveMsg('Conectado. Deja los dos mandos quietos en su posición de reposo: la primera lectura de cada eje es su 0°.');
+    var dec = new TextDecoder(), buf = '', lost = false;
+    try {
+      LV.reader = port.readable.getReader();
+      for (;;){
+        var r = await LV.reader.read();
+        if (r.done) break;
+        buf += dec.decode(r.value, {stream:true});
+        var i;
+        while ((i = buf.indexOf('\n')) >= 0){ onLine(buf.slice(0, i).replace(/\r$/, '').trim()); buf = buf.slice(i + 1); }
+        if (buf.length > 4000) buf = '';
+      }
+    } catch (err) { lost = true; }
+    try { if (LV.reader) LV.reader.releaseLock(); } catch (_) {}
+    try { await port.close(); } catch (_) {}
+    LV.reader = null; LV.port = null; LV.on = false; liveUI();
+    liveMsg(lost ? 'Se perdió la conexión con el Arduino. Revisa el cable y vuelve a conectar.' : 'Desconectado. Los mandos se quedan en la última posición leída.');
+  }
+  $('lv-connect').addEventListener('click', function(){
+    if (LV.port){ if (LV.reader) LV.reader.cancel().catch(function(){}); return; }
+    liveConnect();
+  });
+  $('lv-zero').addEventListener('click', liveZero);
+  $('lv-sim').addEventListener('click', function(){
+    if (LV.sim){ clearInterval(LV.sim); LV.sim = null; LV.on = false; liveUI(); liveMsg('Prueba detenida.'); return; }
+    var t = 0; liveStart();
+    liveMsg('Datos de ejemplo, no vienen de tus mandos. Simula 14 datos (6 encoders + gatillo por mano) para ver cómo responde el modelo.');
+    function hand(ph){
+      var a = [200 + 22*Math.sin(t*0.7+ph), 90 + 15*Math.sin(t*0.9+ph), 310 + 15*Math.sin(t*1.1 + 1+ph), 40 + 30*Math.sin(t*1.3+ph), 120 + 35*Math.sin(t*0.8 + 2+ph), 5 + 90*Math.sin(t*0.5+ph)]
+        .map(function(v){ return ((v % 360 + 360) % 360).toFixed(2); });
+      var pc = Math.max(0, Math.min(100, 50 + 70*Math.sin(t*1.6+ph)));
+      a.push((LV.gmode === 'adc' ? pc*10.23 : LV.gmode === 'deg' ? 60*(1 - pc/100) : pc).toFixed(1));
+      return a;
+    }
+    LV.sim = setInterval(function(){ t += 1/60; onLine(hand(0).concat(hand(1.7)).join(',')); }, 16);
+    liveUI();
+  });
+  (function(){
+    var names = ['base','hombro','codo','ele azul','ele roja','giro del mango'], h = '', saved = null;
+    for (var i=0;i<6;i++){
+      h += '<div class="ax c-'+(i+1)+'"><span class="n"><span class="dot"></span>Eje '+(i+1)+' <small>'+names[i]+'</small></span>'
+        + '<span class="v" id="lv-v'+i+'">—</span><span class="r" id="lv-r'+i+'">sin dato</span>'
+        + '<label for="lv-inv'+i+'"><input type="checkbox" id="lv-inv'+i+'"> Invertir sentido</label></div>';
+    }
+    $('lv-axes').innerHTML = h;
+    try { saved = JSON.parse(localStorage.getItem('mandos-vivo') || 'null'); } catch (_) {}
+    if (saved){
+      SIDES.forEach(function(sd){ if (saved.sign && saved.sign[sd] && saved.sign[sd].length === 6) LV.sign[sd] = saved.sign[sd].map(function(v){ return v < 0 ? -1 : 1; }); });
+      if (saved.single >= 0 && saved.single < 6) LV.single = saved.single;
+      if (saved.first === 'L') LV.first = 'L';
+      if (saved.gmode === 'adc' || saved.gmode === 'deg') LV.gmode = saved.gmode;
+      if (saved.baud) $('lv-baud').value = String(saved.baud);
+    }
+    function save(){ try { localStorage.setItem('mandos-vivo', JSON.stringify({sign:LV.sign, single:LV.single, first:LV.first, gmode:LV.gmode, baud:$('lv-baud').value})); } catch (_) {} }
+    $('lv-single').value = String(LV.single); $('lv-first').value = LV.first; $('lv-gmode').value = LV.gmode;
+    for (var j=0;j<6;j++){ (function(j){
+      $('lv-inv'+j).addEventListener('change', function(e){ LV.sign[act][j] = e.target.checked ? -1 : 1; LV.dirty = true; save(); liveAxesUI(); });
+    })(j); }
+    $('lv-single').addEventListener('change', function(e){ LV.single = parseInt(e.target.value, 10); liveClear(); save(); });
+    $('lv-first').addEventListener('change', function(e){ LV.first = e.target.value; liveClear(); save(); });
+    $('lv-gmode').addEventListener('change', function(e){ LV.gmode = e.target.value; LV.dirty = true; save(); liveAxesUI(); });
+    $('lv-baud').addEventListener('change', save);
+    if (!navigator.serial) liveMsg('Aquí no se puede abrir el puerto serie. Abre el archivo mandos_en_vivo.html en Chrome o Edge de tu computadora para conectar el Arduino. Mientras tanto puedes usar "Probar sin Arduino".');
+    liveUI(); liveAxesUI();
+  })();
+
+  var ok = false;
+  try { ok = !!window.THREE && init3D(); } catch (err) { ok = false; if (window.console) console.error(err); }
+  if (!ok){
+    ['m','i'].forEach(function(s){
+      $('view-'+s).hidden = true;
+      var f = document.createElement('div'); f.className = 'fail';
+      f.textContent = 'No se pudo iniciar la vista 3D en este navegador.';
+      $('stage-'+s).appendChild(f);
+    });
+  }
+  setSide('R');
+  (function loop(now){ stepAnim(now || performance.now()); liveStep(); requestAnimationFrame(loop); })();
+
+  /* ---------- escenas 3D ---------- */
+  function init3D(){
+    function std(c, m, r){ return new THREE.MeshStandardMaterial({color:c, metalness:m, roughness:r}); }
+    function basic(c, o){ return new THREE.MeshBasicMaterial({color:c, transparent:o<1, opacity:o}); }
+    function mesh(g, m, p){ var x = new THREE.Mesh(g, m); if (p) p.add(x); return x; }
+    function cylX(r,l){ var g = new THREE.CylinderGeometry(r,r,l,32); g.rotateZ(Math.PI/2); return g; }
+    function cylZ(r,l){ var g = new THREE.CylinderGeometry(r,r,l,24); g.rotateX(Math.PI/2); return g; }
+    function cylY(r,l){ return new THREE.CylinderGeometry(r,r,l,24); }
+    function lights(sc){
+      sc.add(new THREE.HemisphereLight(0xffffff, 0x556068, 0.85));
+      var a = new THREE.DirectionalLight(0xffffff, 0.75); a.position.set(40, 80, -60); sc.add(a);
+      var b = new THREE.DirectionalLight(0xffffff, 0.3); b.position.set(-50, -20, 40); sc.add(b);
+    }
+    function grid(sc, size, y){
+      var g = new THREE.GridHelper(size, 24, 0x7f8c94, 0x7f8c94);
+      g.material.transparent = true; g.material.opacity = 0.22; g.position.y = y; sc.add(g);
+    }
+    var helpers = [];
+    function label(txt, parent, x, y, z, size, bg, keep){
+      var c = document.createElement('canvas'); c.width = c.height = 64;
+      var g = c.getContext('2d');
+      g.fillStyle = bg || '#18242c'; g.beginPath(); g.arc(32,32,28,0,Math.PI*2); g.fill();
+      g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.stroke();
+      g.fillStyle = '#ffffff'; g.font = 'bold 34px Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, 32, 34);
+      var s = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c), depthTest:false}));
+      s.scale.set(size, size, 1); s.position.set(x, y, z); s.renderOrder = 10; parent.add(s);
+      if (!keep) helpers.push(s);
+    }
+    var dark = std(0x4d5a63, 0.3, 0.55);
+    var SIDECOL = {R:0x2e9e5e, L:0x7a55d0}, SIDEHEX = {R:'#2e9e5e', L:'#7a55d0'};
+
+    /* ===== MANDOS (el izquierdo es el espejo del derecho) ===== */
+    var ms = new THREE.Scene(); lights(ms); grid(ms, 1200, 0);
+    var HY = 155, R4 = 110, R5 = 100;
+    function rod(parent, mat, a, b){
+      var A = new THREE.Vector3(a[0],a[1],a[2]), B = new THREE.Vector3(b[0],b[1],b[2]), d = B.clone().sub(A);
+      var m = mesh(new THREE.CylinderGeometry(6, 6, d.length(), 20), mat, parent);
+      m.position.copy(A).add(B).multiplyScalar(0.5);
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), d.normalize());
+      mesh(new THREE.SphereGeometry(6, 16, 12), mat, parent).position.copy(A);
+      mesh(new THREE.SphereGeometry(6, 16, 12), mat, parent).position.copy(B);
+    }
+    function buildMaster(sd, x, mirror){
+      /* giro de 90°: el brazo rosado va hacia atrás (lejos del usuario) y el mango queda de lado,
+         con el extremo libre hacia afuera; el izquierdo es el espejo lateral del derecho */
+      var root = new THREE.Group(); root.position.x = x; root.rotation.y = Math.PI/2; if (mirror) root.scale.z = -1; ms.add(root);
+      mesh(cylY(40, 14), std(0x27b8c9, 0.1, 0.6), root).position.y = 7;
+      var g1 = new THREE.Group(); root.add(g1);
+      mesh(cylY(15, 65), std(0xe8c62a, 0.1, 0.6), g1).position.y = 32.5;
+      mesh(cylZ(9, 46), dark, g1).position.y = 65;
+      var g2 = new THREE.Group(); g2.position.y = 65; g1.add(g2);
+      mesh(new THREE.BoxGeometry(24, 174, 18), std(0x3fae5a, 0.1, 0.6), g2).position.y = 87;
+      mesh(cylZ(9, 42), dark, g2).position.y = 174;
+      var g3 = new THREE.Group(); g3.position.y = 174; g2.add(g3);
+      rod(g3, std(0xe86aa6, 0.1, 0.6), [0,0,0], [200,0,0]);
+      rod(g3, std(0xe8c62a, 0.1, 0.6), [0,0,0], [0,HY,0]);
+      var gim = new THREE.Group(); gim.position.set(200, HY, 0); g3.add(gim);
+      var g4 = new THREE.Group(); gim.add(g4);
+      var blue = std(0x2f6fd6, 0.1, 0.55);
+      mesh(cylX(4, 22), dark, g4).position.x = -191;
+      rod(g4, blue, [-182,0,0], [-182,-R4,0]); rod(g4, blue, [-182,-R4,0], [0,-R4,0]);
+      var g5 = new THREE.Group(); g4.add(g5);
+      var red = std(0xd83a3a, 0.1, 0.55);
+      mesh(cylY(4, 22), dark, g5).position.y = -R4 + 9;
+      rod(g5, red, [0,-R4+18,0], [0,-R4+18,R5]); rod(g5, red, [0,-R4+18,R5], [0,0,R5]);
+      var g6 = new THREE.Group(); g5.add(g6);
+      var grey = std(0x8a949b, 0.2, 0.5);
+      mesh(cylZ(3.5, 62), dark, g6).position.z = R5 - 31;
+      mesh(cylZ(7, 80), grey, g6).position.z = -2;
+      mesh(new THREE.BoxGeometry(11, 42, 14), grey, g6).position.set(0, -22, -30);
+      var trig = new THREE.Group(); trig.position.set(0, -7, -14); g6.add(trig);
+      mesh(new THREE.BoxGeometry(6, 20, 4), std(0x35b874, 0.1, 0.5), trig).position.y = -10;
+      var hf = new THREE.Object3D(); hf.rotation.y = -Math.PI/2; g6.add(hf);
+      mesh(new THREE.SphereGeometry(3.2, 16, 12), basic(0x18242c, 1), gim);
+      label('1', root, 0, 22, -50, 26); label('2', g1, 0, 65, -40, 26); label('3', g2, 0, 174, -38, 26);
+      label('4', g3, 0, HY + 24, 0, 26); label('5', g4, 0, -R4 - 24, 0, 26); label('6', g5, 0, 0, R5 + 24, 26);
+      label(sd === 'R' ? 'D' : 'I', root, 0, 470, 0, 46, SIDEHEX[sd], true);
+      return {root:root, g1:g1, g2:g2, g3:g3, g4:g4, g5:g5, g6:g6, trig:trig, gim:gim, hf:hf, mirror:mirror};
+    }
+    var MST = {R:buildMaster('R', -330, false), L:buildMaster('L', 330, true)};
+    var rootInv = new THREE.Matrix4(), rel = new THREE.Matrix4(), tmpS = new THREE.Vector3();
+    function masterPose(m, outC, outQ){
+      rootInv.copy(m.root.matrixWorld).invert();
+      rel.multiplyMatrices(rootInv, m.gim.matrixWorld); outC.setFromMatrixPosition(rel);
+      rel.multiplyMatrices(rootInv, m.hf.matrixWorld); rel.decompose(tmpS, outQ, tmpS);
+    }
+    ms.updateMatrixWorld(true);
+    var Crest = new THREE.Vector3(), qtmp = new THREE.Quaternion(); masterPose(MST.R, Crest, qtmp);
+
+    /* ===== INSTRUMENTOS ===== */
+    var is = new THREE.Scene(); lights(is);
+    var steel = std(0xb7c1c8, 0.35, 0.42), jawM = std(0xd4dbe0, 0.4, 0.3);
+    var COL = {roll:0xe39a1f, pitch:0xe0489a, yaw:0x3d8fee};
+    mesh(new THREE.BoxGeometry(200, 8, 220), std(0xb5766f, 0, 0.9), is).position.set(15, -44, 0);
+    var wall = mesh(new THREE.BoxGeometry(240, 1.5, 300), new THREE.MeshBasicMaterial({color:0xd08a80, transparent:true, opacity:0.16, depthWrite:false}), is);
+    wall.position.set(-110, 60, 0);
+    function buildInst(sd, T, Wrest){
+      var pivotG = new THREE.Group(); pivotG.position.copy(T); is.add(pivotG);
+      mesh(cylX(6.4, 46), std(SIDECOL[sd], 0.1, 0.6), pivotG);
+      label(sd === 'R' ? 'D' : 'I', is, T.x - 30, T.y + 28, T.z, 16, SIDEHEX[sd], true);
+      var rollG = new THREE.Group(); pivotG.add(rollG);
+      var toolG = new THREE.Group(); rollG.add(toolG);
+      mesh(cylX(4, 280), steel, toolG).position.x = -140;
+      mesh(cylX(5.2, 6), dark, toolG).position.x = -280;
+      mesh(new THREE.BoxGeometry(280, 0.5, 1.6), basic(COL.roll, 1), toolG).position.set(-140, 4, 0);
+      [-1, 1].forEach(function(s){ mesh(new THREE.BoxGeometry(11, 6.4, 1.5), steel, toolG).position.set(5, 0, s*3.3); });
+      mesh(cylZ(1, 8.8), dark, toolG).position.x = 8;
+      var pitchG = new THREE.Group(); pitchG.position.x = 8; toolG.add(pitchG);
+      mesh(new THREE.BoxGeometry(8, 5.6, 4.6), dark, pitchG).position.x = 2;
+      [-1, 1].forEach(function(s){ mesh(new THREE.BoxGeometry(9, 1.3, 5.6), steel, pitchG).position.set(9.5, s*2.6, 0); });
+      mesh(cylY(0.9, 7), dark, pitchG).position.x = 11;
+      function jaw(side){
+        var g = new THREE.Group(); g.position.x = 11; pitchG.add(g);
+        var b = new THREE.BoxGeometry(16, 3.2, 1.5, 4, 1, 1); b.translate(8, 0, side*0.75);
+        var p = b.attributes.position;
+        for (var i=0;i<p.count;i++){ var t = p.getX(i)/16; p.setY(i, p.getY(i)*(1 - 0.6*t)); p.setZ(i, p.getZ(i)*(1 - 0.45*t)); }
+        b.computeVertexNormals(); mesh(b, jawM, g);
+        mesh(cylY(2.6, 1.7), jawM, g).position.y = side*0.9;
+        return g;
+      }
+      var jawA = jaw(-1), jawB = jaw(1);
+      var tipG = new THREE.Group(); tipG.position.x = 11; pitchG.add(tipG);
+      var tip = new THREE.Object3D(); tip.position.x = 16; tipG.add(tip);
+      helpers.push(mesh(cylX(0.22, 420), basic(COL.roll, 0.6), pivotG));
+      var aP = mesh(cylZ(0.22, 34), basic(COL.pitch, 0.9), toolG); aP.position.x = 8; helpers.push(aP);
+      var aY = mesh(cylY(0.22, 34), basic(COL.yaw, 0.9), pitchG); aY.position.x = 11; helpers.push(aY);
+      var MAXP = 2500, tpos = new Float32Array(MAXP*3);
+      var tgeo = new THREE.BufferGeometry(); tgeo.setAttribute('position', new THREE.BufferAttribute(tpos, 3)); tgeo.setDrawRange(0, 0);
+      var tline = new THREE.Line(tgeo, new THREE.LineBasicMaterial({color:SIDECOL[sd]})); tline.frustumCulled = false; is.add(tline);
+      return {T:T, Wrest:Wrest, W:new THREE.Vector3(), pivotG:pivotG, rollG:rollG, toolG:toolG, pitchG:pitchG, jawA:jawA, jawB:jawB, tipG:tipG, tip:tip,
+              tpos:tpos, tgeo:tgeo, tn:0, MAXP:MAXP, last:new THREE.Vector3(1e9,0,0)};
+    }
+    /* +Z del instrumento = derecha del usuario; los trócares están separados y los vástagos convergen */
+    var INS = {R:buildInst('R', new THREE.Vector3(-110, 60, 75), new THREE.Vector3(0, 0, 32)),
+               L:buildInst('L', new THREE.Vector3(-110, 60, -75), new THREE.Vector3(0, 0, -32))};
+    setAxes = function(on){ helpers.forEach(function(h){ h.visible = on; }); };
+    clearTrail = function(){ SIDES.forEach(function(sd){ var I = INS[sd]; I.tn = 0; I.tgeo.setDrawRange(0, 0); I.last.set(1e9,0,0); }); };
+
+    /* ===== vistas con cámara orbital ===== */
+    function makeView(canvas, stage, scene, home, target, presets, onPreset){
+      var renderer = new THREE.WebGLRenderer({canvas:canvas, antialias:true, alpha:true});
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); renderer.setClearColor(0x000000, 0);
+      var camera = new THREE.PerspectiveCamera(35, 1, 1, 6000);
+      var cam = {th:home[0], ph:home[1], r:home[2]}, camTo = null, queued = false;
+      function place(){
+        var s = Math.sin(cam.ph);
+        camera.position.set(target.x + cam.r*s*Math.cos(cam.th), target.y + cam.r*Math.cos(cam.ph), target.z + cam.r*s*Math.sin(cam.th));
+        camera.lookAt(target);
+      }
+      function draw(){
+        if (queued) return; queued = true;
+        requestAnimationFrame(function(){
+          queued = false;
+          if (camTo){
+            var d = 0; ['th','ph','r'].forEach(function(p){ var e = camTo[p] - cam[p]; cam[p] += e*0.18; d += Math.abs(e); });
+            if (d < 0.01){ cam.th = camTo.th; cam.ph = camTo.ph; cam.r = camTo.r; camTo = null; }
+          }
+          place(); renderer.render(scene, camera); if (camTo) draw();
+        });
+      }
+      Array.prototype.forEach.call(stage.querySelectorAll('[data-v]'), function(b){
+        b.addEventListener('click', function(){
+          var p = presets[b.dataset.v];
+          var dth = p[0] - cam.th; dth = Math.atan2(Math.sin(dth), Math.cos(dth));
+          camTo = {th:cam.th + dth, ph:p[1], r:p[2]}; if (onPreset) onPreset(b.dataset.v); draw();
+        });
+      });
+      var pts = {}, pinch = 0, rmin = home[2]*0.12, rmax = home[2]*2.2;
+      function count(){ return Object.keys(pts).length; }
+      function dist(){ var k = Object.keys(pts), a = pts[k[0]], b = pts[k[1]]; return Math.hypot(a.x-b.x, a.y-b.y); }
+      canvas.addEventListener('pointerdown', function(e){
+        pts[e.pointerId] = {x:e.clientX, y:e.clientY}; camTo = null;
+        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+        if (count() === 2) pinch = dist();
+      });
+      canvas.addEventListener('pointermove', function(e){
+        var p = pts[e.pointerId]; if (!p) return;
+        var dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+        if (count() === 1){ cam.th += dx*0.008; cam.ph = Math.min(Math.PI-0.02, Math.max(0.02, cam.ph - dy*0.008)); }
+        else if (count() === 2){ var d = dist(); if (pinch > 0 && d > 0) cam.r = Math.min(rmax, Math.max(rmin, cam.r*pinch/d)); pinch = d; }
+        draw();
+      });
+      function up(e){ delete pts[e.pointerId]; pinch = 0; }
+      canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+      canvas.addEventListener('wheel', function(e){
+        e.preventDefault(); camTo = null;
+        cam.r = Math.min(rmax, Math.max(rmin, cam.r*Math.exp(e.deltaY*0.0012))); draw();
+      }, {passive:false});
+      function resize(){
+        var w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return;
+        renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix(); draw();
+      }
+      if (window.ResizeObserver) new ResizeObserver(resize).observe(stage); else window.addEventListener('resize', resize);
+      resize();
+      return draw;
+    }
+    var H = Math.PI/2;
+    var drawM = makeView($('view-m'), $('stage-m'), ms, [-1.95, 1.2, 1400], new THREE.Vector3(0, 220, -90),
+      {usr:[-H, 1.3, 1350], iso:[-1.95, 1.2, 1400], sup:[-H, 0.02, 1400]});
+    var tgtI = new THREE.Vector3(-30, 10, 0), follow = false;
+    var drawI = makeView($('view-i'), $('stage-i'), is, [Math.PI, 0.62, 470], tgtI,
+      {cam:[Math.PI, 0.62, 470], lat:[H, H, 460], sup:[Math.PI, 0.02, 480], mun:[2.4, 1.1, 120]},
+      function(v){ follow = v === 'mun'; if (!follow) tgtI.set(-30, 10, 0); });
+    followAct = function(){ if (follow) tgtI.copy(INS[act].W); };
+
+    /* ===== cinemática: mando -> instrumento, por mano ===== */
+    var C = new THREE.Vector3(), vx = new THREE.Vector3(), vy = new THREE.Vector3(), vz = new THREE.Vector3(), wp = new THREE.Vector3();
+    var UP = new THREE.Vector3(0,1,0), Qh = new THREE.Quaternion(), Qs = new THREE.Quaternion(), Qr = new THREE.Quaternion();
+    var M = new THREE.Matrix4(), M2 = new THREE.Matrix4();
+    /* orientación: el mango en reposo (de lado) equivale al instrumento en reposo; girar el mango sobre su eje = rotación del vástago */
+    var Uinv = new THREE.Quaternion().setFromAxisAngle(UP, Math.PI/2);
+    /* posición: el usuario mira hacia −X del mando (hacia la base); empujar la mano hacia adelante = meter el instrumento */
+    var Upos = new THREE.Quaternion().setFromAxisAngle(UP, Math.PI);
+
+    function solve(sd){
+      var s = S[sd], m = MST[sd], I = INS[sd], k = K[sd];
+      m.g1.rotation.y = s.q1*D2R; m.g2.rotation.z = s.q2*D2R; m.g3.rotation.z = s.q3*D2R;
+      m.g4.rotation.x = s.q4*D2R; m.g5.rotation.y = s.q5*D2R; m.g6.rotation.z = s.q6*D2R;
+      m.trig.rotation.x = s.g/100*0.5;
+      m.root.updateMatrixWorld(true);
+      masterPose(m, C, Qh);
+      C.sub(Crest).applyQuaternion(Upos); Qh.premultiply(Uinv);
+      if (m.mirror){ C.z = -C.z; Qh.x = -Qh.x; Qh.y = -Qh.y; }
+
+      I.W.copy(C).multiplyScalar(scale).add(I.Wrest);
+      vx.copy(I.W).sub(I.T); var ins = vx.length(); vx.normalize();
+      vz.crossVectors(vx, UP).normalize(); vy.crossVectors(vz, vx);
+      M.makeBasis(vx, vy, vz); Qs.setFromRotationMatrix(M);
+      I.pivotG.quaternion.copy(Qs);
+      I.toolG.position.x = ins - 8;
+
+      /* R = R_vástago^-1 · R_mango = Rx(rotación) · Rz(cabeceo) · Ry(guiñada) */
+      Qr.copy(Qs).invert().multiply(Qh); M2.makeRotationFromQuaternion(Qr);
+      var e = M2.elements;
+      var b = -Math.asin(Math.max(-1, Math.min(1, e[4])))/D2R;
+      var a = Math.atan2(e[6], e[5])/D2R;
+      var c = Math.atan2(e[8], e[0])/D2R;
+      while (a - s.roll > 180) a -= 360;
+      while (a - s.roll < -180) a += 360;
+      if (a > 270) a -= 360; if (a < -270) a += 360;
+      k.wrist = Math.abs(b) > 80 || Math.abs(c) > 80;
+      k.work = ins < 35 || ins > 250;
+      s.roll = a; s.pitch = Math.max(-80, Math.min(80, b)); s.yaw = Math.max(-80, Math.min(80, c));
+
+      var op = openAng(sd);
+      I.rollG.rotation.x = s.roll*D2R;
+      I.pitchG.rotation.z = s.pitch*D2R;
+      I.jawA.rotation.y = (s.yaw + op/2)*D2R;
+      I.jawB.rotation.y = (s.yaw - op/2)*D2R;
+      I.tipG.rotation.y = s.yaw*D2R;
+      I.pivotG.updateMatrixWorld(true);
+      I.tip.getWorldPosition(wp);
+      k.tip = [wp.x, wp.y, wp.z];
+      k.inc = Math.asin(-vx.y)/D2R; k.lat = Math.atan2(vx.z, vx.x)/D2R; k.ins = ins;
+      if (trailOn && wp.distanceTo(I.last) > 0.25){
+        if (I.tn >= I.MAXP){ I.tpos.copyWithin(0, 3); I.tn = I.MAXP - 1; }
+        I.tpos[I.tn*3] = wp.x; I.tpos[I.tn*3+1] = wp.y; I.tpos[I.tn*3+2] = wp.z; I.tn++;
+        I.tgeo.attributes.position.needsUpdate = true; I.tgeo.setDrawRange(0, I.tn); I.last.copy(wp);
+      }
+    }
+    apply3D = function(){
+      solve('R'); solve('L');
+      if (follow) tgtI.copy(INS[act].W);
+      drawM(); drawI();
+    };
+    return true;
+  }
+})();
+</script>
+
+</body></html>
