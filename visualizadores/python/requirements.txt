@@ -1,0 +1,4 @@
+vpython
+pyserial
+matplotlib
+numpy
