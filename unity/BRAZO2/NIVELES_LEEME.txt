@@ -1,0 +1,63 @@
+BRAZOSrobot — niveles de entrenamiento para cirugía robótica de páncreas
+========================================================================
+
+Cómo usar
+  Abre BRAZO2 en Unity y dale Play. Arriba del panel izquierdo eliges el nivel (o F1–F6).
+  El cronómetro empieza al cerrar cualquier pinza (o con el botón Empezar / tecla Intro).
+  Al terminar, el panel muestra puntaje, perfil por dominios, métricas y retroalimentación.
+  Cada intento se guarda en BRAZOSrobot_resultados.csv (la ruta aparece en el panel).
+  "Mano dominante" cambia qué mano corta/clipa/sutura y cuál tracciona.
+  N muestra u oculta los nombres anatómicos.
+
+Niveles
+  1 Anillos     Transferencia de anillos (el ejercicio que ya existía).
+  2 Tejido      Exposición y suspensión del páncreas: una mano levanta y MANTIENE el estómago,
+                la otra suspende el cuello con el lazo vascular.
+  3 Bimanual    Cinta por el túnel retropancreático: una mano pasa la punta entre el cuello y la
+                vena mesentérica superior, la otra la recibe; luego las dos suspenden el cuello.
+  4 Disección   Exposición de la vena mesentérica superior: una mano tensa el mesocolon y la otra
+                corta el tejido que cubre la vena, junto al tronco de Henle y la vena cólica media.
+  5 Vasos       Ramas pancreáticas de la vena esplénica (técnica de Kimura): tracción con el lazo,
+                2 clips del lado de la vena + 1 del lado del páncreas y corte entre ellos.
+  6 Sutura      Tres puntos de la pancreatoyeyunostomía: entrada/salida en las marcas, giro sobre
+                la curva de la aguja, extracción con la otra mano, cabo corto y ajuste sin cortar.
+
+Percepción de profundidad (sección del panel izquierdo; se guardan entre sesiones)
+  Luz del endoscopio  La luz sale de la cámara y decae con la distancia, como en el quirófano:
+                      lo cercano se ve más claro que lo lejano.
+  Sombras             La muñeca y las mordazas proyectan una sombra suave sobre el tejido; al
+                      bajar, punta y sombra se juntan y la sombra se vuelve más nítida.
+  Indicador (P)       Anillo del color de la mano sobre el tejido que está detrás de la punta, con
+                      la distancia en mm; se cierra al acercarse y se pone rojo al tocar.
+  3D (V)              Anaglifo rojo-cian (lentes de cartón rojo-cian): dos cámaras separadas como
+                      los dos canales del endoscopio 3D del da Vinci. Separación ajustable 1–10 mm.
+  Las ayudas activas quedan registradas con cada resultado ("Ayudas de profundidad"), para
+  comparar el desempeño con y sin ayudas. Conviene ir quitándolas: en el quirófano no existen
+  (salvo la luz del endoscopio y el 3D).
+
+Puntaje
+  100 menos las penalizaciones de cada métrica (la tabla final muestra cuánto restó cada una).
+  El perfil 1–5 agrupa las penalizaciones en cinco dominios inspirados en GEARS (precisión y
+  profundidad, destreza bimanual, eficiencia, respeto del tejido, control del robot). Es un cálculo
+  automático del simulador, NO la escala GEARS validada.
+  Métricas comunes a todos los niveles (las del simulador da Vinci): tiempo, economía de movimiento
+  (cm recorridos por las puntas), choques entre instrumentos e instrumentos fuera de la vista.
+
+Archivos (Assets/Assets/BRAZOSrobot/Scripts)
+  Anatomia.cs       modelo anatómico a escala real y pruebas de contacto con vasos
+  Simulacion.cs     tejido deformable, hilo/cinta, sangrado, métricas, puntaje y panel
+  NivelTejido.cs    niveles 1 y 2        NivelBimanual.cs   nivel 3
+  NivelDiseccion.cs nivel 4              NivelVasos.cs      nivel 5
+  NivelSutura.cs    nivel 6
+  AutoPrueba.cs     autoprueba (menú BRAZOSrobot > Autoprueba de niveles): un piloto ejecuta cada
+                    nivel por la trayectoria ideal y deja el resultado e imágenes en Logs/.
+  Todos los umbrales (zonas verdes, tiempos de referencia, penalizaciones) son constantes al
+  principio de cada archivo de nivel.
+  Respaldo de los dos archivos originales modificados: carpeta Respaldo_antes_de_niveles.
+
+Simplificaciones que conviene declarar en la tesis
+  · Sin háptica: la fuerza se sustituye por barras de tensión y por el color del tejido.
+  · Tejido: deformación geométrica (caída gaussiana), no un modelo físico de elementos finitos.
+  · Nivel 6: el nudo no se simula; se evalúa la tensión simétrica del ajuste.
+  · Los instrumentos no chocan con los órganos: los contactos se miden y penalizan, no se impiden.
+  · Diámetros de vasos y umbrales de tensión son valores típicos elegidos para el simulador.

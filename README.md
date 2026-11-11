@@ -18,6 +18,7 @@ Cada mano sujeta el mango de un manipulador. La posición sale del brazo y la or
 
 | Carpeta | Qué hay |
 |---|---|
+| `unity/` | Proyecto de Unity BRAZO2 con los ejercicios de entrenamiento |
 | `firmware/` | Código de la ESP32 que lee los encoders y los joysticks |
 | `visualizadores/python/` | Scripts de prueba en VPython y matplotlib para ver los encoders y el brazo en tiempo real |
 | `visualizadores/html/` | Página con Three.js y Web Serial para ver los dos mandos e instrumentos en vivo desde Chrome |

@@ -28,3 +28,27 @@ Last Loaded *.pdsbak
 # SolidWorks (archivos temporales y de bloqueo)
 ~$*
 *.SLDBAK
+
+# Unity (se regeneran al abrir el proyecto)
+unity/BRAZO2/[Ll]ibrary/
+unity/BRAZO2/[Tt]emp/
+unity/BRAZO2/[Oo]bj/
+unity/BRAZO2/[Ll]ogs/
+unity/BRAZO2/[Bb]uild/
+unity/BRAZO2/[Bb]uilds/
+unity/BRAZO2/[Uu]ser[Ss]ettings/
+unity/BRAZO2/[Mm]emoryCaptures/
+unity/BRAZO2/Assets/_Recovery/
+unity/BRAZO2/Assets/_Recovery.meta
+unity/BRAZO2/Respaldo*/
+unity/BRAZO2/Videos/
+*.csproj
+*.sln
+*.unityproj
+*.pidb
+*.booproj
+*.suo
+*.user
+*.userprefs
+*.apk
+*.aab
