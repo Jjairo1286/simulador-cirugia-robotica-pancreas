@@ -8,6 +8,8 @@ Arriba van los conectores de los joysticks (ADC IN), de la ESP32 (INF ESP), de l
 
 ## Archivos
 
+`PCB_Simulador_Cirugia_Pancreas.pdsprj` es el proyecto de Proteus, con el esquemático y el ruteo de la placa en un solo archivo. Se abre con Proteus 8 o una versión posterior.
+
 `PCB_vista_3D.png` es el render 3D de Proteus, la placa vista desde la cara de componentes.
 
 `PCB_Planchado_Acetato.pdf` sirve para fabricar la placa por planchado. Tiene dos hojas, cada una con tres copias para repuestos:
