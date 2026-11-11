@@ -16,6 +16,10 @@ Desde el mismo menú se puede correr la autoprueba de los niveles, grabar los vi
 
 ## Ejercicios
 
+![Ejercicios del simulador](capturas/ejercicios.png)
+
+Arriba a la izquierda, Anillos: los anillos rosados se pasan de los postes blancos a los verdes. Arriba a la derecha, Tejido: una pinza levanta el estómago y la otra suspende el cuello del páncreas con el lazo vascular. Abajo a la izquierda, Disección: se corta el tejido amarillo que cubre la vena mesentérica superior. Abajo a la derecha, Vasos: tracción con el lazo sobre una rama de la vena esplénica antes de clipar y cortar. El nivel Bimanual no aparece en esta imagen.
+
 El detalle de cada nivel, la percepción de profundidad, el puntaje y las simplificaciones del modelo están en [`BRAZO2/NIVELES_LEEME.txt`](BRAZO2/NIVELES_LEEME.txt). En resumen:
 
 | Nivel | Ejercicio | Script |
